@@ -193,7 +193,7 @@ void Simulate_Player_Action(state &S,const strat &Moves,const int color){
         	} 
         }
         else if(m.type==BOMB){
-        	if(m.from==m.to || S.F[m.from].owner!=color){
+        	if(m.from==m.to || S.F[m.from].owner!=color  || Invalid_Factory_Id(S,m.to)){
         		throw(2);
         	}
         	if(S.N_Bombs[color==1?0:1]!=0){
