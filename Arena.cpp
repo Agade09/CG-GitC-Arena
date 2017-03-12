@@ -300,6 +300,9 @@ void Make_Move(state &S,AI &Bot,const string &Move){
 				m.type=INCREASE;
 				ss >> m.from;
 			}
+			else if(type=="MSG"){
+				continue;
+			}
 			else{
 				throw(3);
 			}
@@ -360,7 +363,7 @@ inline void Play_Move(state &S,AI &Bot,const string &M){
 	}
 }
 
-bool Player_Alive(const state &S,const int color){
+inline bool Player_Alive(const state &S,const int color)noexcept{
 	return find_if(S.F.begin(),S.F.end(),[&](const factory &f){return f.owner==color && (f.units!=0 || f.prod!=0);})!=S.F.end() || find_if(S.T.begin(),S.T.end(),[&](const troop &t){return t.owner==color;})!=S.T.end();
 }
 
