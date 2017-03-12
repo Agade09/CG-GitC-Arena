@@ -361,17 +361,7 @@ inline void Play_Move(state &S,AI &Bot,const string &M){
 }
 
 bool Player_Alive(const state &S,const int color){
-	for(const factory &f:S.F){
-		if(f.owner==color){
-			return true;
-		}
-	}
-	for(const troop &t:S.T){
-		if(t.owner==color){
-			return true;
-		}
-	}
-	return false;
+	return find_if(S.F.begin(),S.F.end(),[&](const factory &f){return f.owner==color && (f.units!=0 || f.prod!=0);})!=S.F.end() || find_if(S.T.begin(),S.T.end(),[&](const troop &t){return t.owner==color;})!=S.T.end();
 }
 
 int Play_Game(const array<string,N> &Bot_Names,state &S){
