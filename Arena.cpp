@@ -92,7 +92,6 @@ struct AI{
 	string name;
 	ostream *in;
 	__gnu_cxx::stdio_filebuf<char> inBuff;
-	
 	inline void stop(){
 		kill(pid,SIGTERM);
 		int status;
@@ -213,8 +212,7 @@ void Simulate_Player_Action(state &S,const strat &Moves,const int color){
 void Simulate(state &S){
     vector<int> Arrived_Troops(S.F.size(),0);
     //Troop and bomb movement
-    for(int i=0;i<S.T.size();++i){
-        troop &t{S.T[i]};
+    for(troop &t:S.T){
         --t.turns;
         if(t.turns==0){
             Arrived_Troops[t.target]+=t.units*t.owner;//Units that arrive to a factory on this turn fight first
@@ -316,7 +314,7 @@ string GetMove(AI &Bot,const int turn){
 	pollfd outpoll{Bot.outPipe,POLLIN|POLLPRI};
 	time_point<system_clock> Start_Time{system_clock::now()};
 	while(static_cast<duration<double>>(system_clock::now()-Start_Time).count()<(turn==1?FirstTurnTime:TimeLimit)){
-		double TimeLeft{(turn==1?0.15:0.10)-static_cast<duration<double>>(system_clock::now()-Start_Time).count()};
+		double TimeLeft{(turn==1?FirstTurnTime:TimeLimit)-static_cast<duration<double>>(system_clock::now()-Start_Time).count()};
 		if(poll(&outpoll,1,TimeLeft)){
 			return EmptyPipe(Bot.outPipe);
 		}
@@ -472,7 +470,7 @@ inline bool Valid_Spawn(const vec &r,const state &S,const int id,const int minSp
 int Play_Round(array<string,N> Bot_Names){
 	default_random_engine generator(system_clock::now().time_since_epoch().count());
 	uniform_int_distribution<int> Swap_Distrib(0,1);
-	const bool player_swap=Swap_Distrib(generator)==1;
+	const bool player_swap{Swap_Distrib(generator)==1};
 	if(player_swap){
 		swap(Bot_Names[0],Bot_Names[1]);
 	}
@@ -562,7 +560,7 @@ int main(int argc,char **argv){
 		Test.close();
 	}
 	int games{0},draws{0};
-	double points[2]{0,0};
+	array<double,2> points{0,0};
 	#pragma omp parallel num_threads(N_Threads) shared(games,points,Bot_Names)
 	while(true){
 		int winner{Play_Round(Bot_Names)};
