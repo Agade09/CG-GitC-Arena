@@ -19,7 +19,7 @@ using namespace std::chrono;
 constexpr bool Debug_AI{false},Timeout{true};
 constexpr int PIPE_READ{0},PIPE_WRITE{1};
 constexpr int N{2};//Number of players, 1v1
-constexpr double FirstTurnTime{Timeout?1:10},TimeLimit{Timeout?0.05:5};
+constexpr double FirstTurnTime{1*(Timeout?10:1)},TimeLimit{0.05*(Timeout?10:1)};
 constexpr int extra_space_between_factories{300};
 constexpr int W{16000},H{6500};
 constexpr int Min_Production_Rate{4};
@@ -211,18 +211,18 @@ void Simulate_Player_Action(state &S,const strat &Moves,const int color){
 
 void Simulate(state &S){
     vector<int> Arrived_Troops(S.F.size(),0);
-    //Troop and bomb movement
-    for(troop &t:S.T){
+    for(auto it=S.T.begin();it!=S.T.end();){//Troop movement
+        troop &t{*it};
         --t.turns;
         if(t.turns==0){
             Arrived_Troops[t.target]+=t.units*t.owner;//Units that arrive to a factory on this turn fight first
+            it=S.T.erase(it);
+        }
+        else{
+            ++it;
         }
     }
-    for(auto &it:S.B){
-        --it.second.turns;
-    }
-    //Production
-    for(factory &f:S.F){
+    for(factory &f:S.F){//Production
         if(f.owner!=0){
             f.turns=max(0,f.turns-1);
             if(f.turns==0){
@@ -230,8 +230,7 @@ void Simulate(state &S){
             }
         }
     }
-    //Battles
-    for(int i=0;i<S.F.size();++i){
+    for(int i=0;i<S.F.size();++i){//Battles
         if(Arrived_Troops[i]!=0 && Arrived_Troops[i]*S.F[i].owner<=0/*Different sign->fight*/){
             if(abs(Arrived_Troops[i])>S.F[i].units){
                 S.F[i].owner=Arrived_Troops[i]>0?1:-1;
@@ -245,25 +244,19 @@ void Simulate(state &S){
             S.F[i].units+=abs(Arrived_Troops[i]);
         }
     }
-    //Bombs explode
-    for(auto &it:S.B){
-        bomb &b{it.second};
+    for(auto it=S.B.begin();it!=S.B.end();){//Bombs move and explode
+        bomb &b{it->second};
+        --b.turns;
         if(b.turns==0){
             factory &f{S.F[b.target]};
             f.units-=max(min(10,f.units),f.units/2);
             f.turns=5;
+            it=S.B.erase(it);
+        }
+        else{
+            ++it;
         }
     }
-    //Erase blown bombs and arrived troops
-    for(auto it=S.B.begin();it!=S.B.end();){
-    	if((*it).second.turns==0){
-    		it=S.B.erase(it);
-    	}
-    	else{
-    		++it;
-    	}
-    }
-    S.T.erase(remove_if(S.T.begin(),S.T.end(),[](const troop &t){return t.turns==0;}),S.T.end());
 }
 
 void Make_Move(state &S,AI &Bot,const string &Move){
