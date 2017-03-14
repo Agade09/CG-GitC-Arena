@@ -13,6 +13,7 @@
 #include <limits>
 #include <algorithm>
 #include <map>
+#include <thread>
 using namespace std;
 using namespace std::chrono;
 
@@ -161,7 +162,7 @@ void StartProcess(AI &Bot){
 		Bot.outPipe=StdoutPipe[PIPE_READ];
     	Bot.errPipe=StderrPipe[PIPE_READ];
     	Bot.pid=nchild;
-		sleep(0.25);
+		this_thread::sleep_for(milliseconds(10));
   	}
   	else{//failed to create child
   		close(StdinPipe[PIPE_READ]);
@@ -356,6 +357,15 @@ inline bool Player_Alive(const state &S,const int color)noexcept{
 	return find_if(S.F.begin(),S.F.end(),[&](const factory &f){return f.owner==color && (f.units!=0 || f.prod!=0);})!=S.F.end() || find_if(S.T.begin(),S.T.end(),[&](const troop &t){return t.owner==color;})!=S.T.end();
 }
 
+inline bool All_Dead(const array<AI,N> &Bot){
+	for(const AI &b:Bot){
+		if(b.alive()){
+			return false;
+		}
+	}
+	return true;
+}
+
 int Play_Game(const array<string,N> &Bot_Names,state &S){
 	array<AI,N> Bot;
 	for(int i=0;i<N;++i){
@@ -447,6 +457,9 @@ int Play_Game(const array<string,N> &Bot_Names,state &S){
 				//cerr << 1 << " has won in " << turn << " turns" << endl;
 				return 1;
 			}
+		}
+		else if(All_Dead(Bot)){
+			return -1;
 		}
 	}
 	throw(0);
