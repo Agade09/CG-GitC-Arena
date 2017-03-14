@@ -161,7 +161,7 @@ void StartProcess(AI &Bot){
 		Bot.outPipe=StdoutPipe[PIPE_READ];
     	Bot.errPipe=StderrPipe[PIPE_READ];
     	Bot.pid=nchild;
-		//sleep(0.25);
+		sleep(0.25);
   	}
   	else{//failed to create child
   		close(StdinPipe[PIPE_READ]);
