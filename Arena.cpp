@@ -88,10 +88,8 @@ inline string EmptyPipe(const int f){
 }
 
 struct AI{
-	int id,pid,outPipe,errPipe;
+	int id,pid,outPipe,errPipe,inPipe;
 	string name;
-	ostream *in;
-	__gnu_cxx::stdio_filebuf<char> inBuff;
 	inline void stop(){
 		kill(pid,SIGTERM);
 		int status;
@@ -101,11 +99,16 @@ struct AI{
 	inline bool alive()const{
 		return kill(pid,0)!=-1;//Check if process is still running
 	}
+	inline void Feed_Inputs(const string &inputs){
+		if(write(inPipe,&inputs[0],inputs.size())==-1){
+			throw(5);
+		}
+	}
 	inline ~AI(){
-		stop();
 		close(errPipe);
 		close(outPipe);
-		delete in;
+		close(inPipe);
+		stop();
 	}
 };
 
@@ -146,7 +149,7 @@ void StartProcess(AI &Bot){
 	    close(StdoutPipe[PIPE_WRITE]);
 	    close(StderrPipe[PIPE_READ]);
 	    close(StderrPipe[PIPE_WRITE]);
-	    execl(Bot.name.c_str(),Bot.name.c_str(),(char*)0);//(char*)0 is really important
+	    execl(Bot.name.c_str(),Bot.name.c_str(),(char*)NULL);//(char*)Null is really important
 	    //If you get past the previous line its an error
 	    perror("exec of the child process");
   	}
@@ -154,12 +157,11 @@ void StartProcess(AI &Bot){
   		close(StdinPipe[PIPE_READ]);//Parent does not read from stdin of child
     	close(StdoutPipe[PIPE_WRITE]);//Parent does not write to stdout of child
     	close(StderrPipe[PIPE_WRITE]);//Parent does not write to stderr of child
-    	Bot.inBuff=__gnu_cxx::stdio_filebuf<char>(StdinPipe[PIPE_WRITE], std::ios::out);
-    	Bot.in=new ostream(&Bot.inBuff);
+    	Bot.inPipe=StdinPipe[PIPE_WRITE];
 		Bot.outPipe=StdoutPipe[PIPE_READ];
     	Bot.errPipe=StderrPipe[PIPE_READ];
     	Bot.pid=nchild;
-		sleep(0.25);
+		//sleep(0.25);
   	}
   	else{//failed to create child
   		close(StdinPipe[PIPE_READ]);
@@ -334,14 +336,7 @@ inline void Play_Move(state &S,AI &Bot,const string &M){
 		}
 	}
 	catch(const int ex){
-		if(ex==1){//Timeout
-			cerr << "Loss by Timeout of AI " << Bot.id << " name: " << Bot.name << endl;
-			if(Debug_AI){
-				//ofstream crashfile("Crash.txt",ios::app);
-				//crashfile << "Timeout of AI " << Bot.id << " Name: " << Bot.name << endl;
-			}
-		}
-		else if(ex==2){
+		if(ex==2){
 			cerr << "Invalid move from AI " << Bot.id << " name: " << Bot.name << endl;
 		}
 		else if(ex==3){
@@ -349,6 +344,9 @@ inline void Play_Move(state &S,AI &Bot,const string &M){
 		}
 		else if(ex==4){
 			cerr << "Error emptying buffer from AI " << Bot.id << " name: " << Bot.name << endl;
+		}
+		else if(ex==5){
+			cerr << "Error writing to AI " << Bot.id << " name: " << Bot.name << endl; 
 		}
 		Bot.stop();
 	}
@@ -364,12 +362,14 @@ int Play_Game(const array<string,N> &Bot_Names,state &S){
 		Bot[i].id=i;
 		Bot[i].name=Bot_Names[i];
 		StartProcess(Bot[i]);
-		*Bot[i].in << S.F.size() << " " << S.F.size()*(S.F.size()-1)/2 << endl;
+		stringstream ss;
+		ss << S.F.size() << " " << S.F.size()*(S.F.size()-1)/2 << endl;
 		for(int j=0;j<S.F.size();++j){
 			for(int k=j+1;k<S.F.size();++k){
-				*Bot[i].in << j << " " << k << " " << S.F[j].L[k] << endl;
+				ss << j << " " << k << " " << S.F[j].L[k] << endl;
 			}
 		}
+		Bot[i].Feed_Inputs(ss.str());
 	}
 	S.entityId=0;
 	int turn{0};
@@ -382,22 +382,27 @@ int Play_Game(const array<string,N> &Bot_Names,state &S){
 					return i;
 				}
 				int color{i==0?1:-1};
-				*Bot[i].in << S.F.size()+S.T.size()+S.B.size() << endl;
+				stringstream ss;
+				ss << S.F.size()+S.T.size()+S.B.size() << endl;
 				for(int j=0;j<S.F.size();++j){
-					*Bot[i].in << j << " FACTORY " << color*S.F[j].owner << " " << S.F[j].units << " " << S.F[j].prod << " " << S.F[j].turns << " " << 0 << endl;
+					ss << j << " FACTORY " << color*S.F[j].owner << " " << S.F[j].units << " " << S.F[j].prod << " " << S.F[j].turns << " " << 0 << endl;
 				}
 				for(int j=0;j<S.T.size();++j){
-					*Bot[i].in << j << " TROOP " << color*S.T[j].owner << " " << S.T[j].source << " " << S.T[j].target << " " << S.T[j].units << " " << S.T[j].turns << endl;
+					ss << j << " TROOP " << color*S.T[j].owner << " " << S.T[j].source << " " << S.T[j].target << " " << S.T[j].units << " " << S.T[j].turns << endl;
 				}
 				for(const auto &it:S.B){
 					const bomb &b{it.second};
-					*Bot[i].in << it.first << " BOMB " << color*b.owner << " " << b.source << " " << (b.owner==color?b.target:-1) << " " << (b.owner==color?b.turns:-1) << " " << 0 << endl;
+					ss << it.first << " BOMB " << color*b.owner << " " << b.source << " " << (b.owner==color?b.target:-1) << " " << (b.owner==color?b.turns:-1) << " " << 0 << endl;
 				}
+				Bot[i].Feed_Inputs(ss.str());
 				try{
 					M[i]=GetMove(Bot[i],turn);
 					//cerr << M[i] << endl;
 				}
-				catch(int excpt){
+				catch(int ex){
+					if(ex==1){//Timeout
+						cerr << "Loss by Timeout of AI " << Bot[i].id << " name: " << Bot[i].name << endl;
+					}
 					Bot[i].stop();
 				}
 			}
