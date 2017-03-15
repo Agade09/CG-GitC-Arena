@@ -3,10 +3,8 @@
 #include <fstream>
 #include <unistd.h>
 #include <sys/wait.h>
-#include <ext/stdio_filebuf.h>
 #include <poll.h>
 #include <array>
-#include <queue>
 #include <random>
 #include <chrono>
 #include <omp.h>
@@ -307,7 +305,7 @@ void Make_Move(state &S,AI &Bot,const string &Move){
 }
 
 string GetMove(AI &Bot,const int turn){
-	pollfd outpoll{Bot.outPipe,POLLIN|POLLPRI};
+	pollfd outpoll{Bot.outPipe,POLLIN};
 	time_point<system_clock> Start_Time{system_clock::now()};
 	while(static_cast<duration<double>>(system_clock::now()-Start_Time).count()<(turn==1?FirstTurnTime:TimeLimit)){
 		double TimeLeft{(turn==1?FirstTurnTime:TimeLimit)-static_cast<duration<double>>(system_clock::now()-Start_Time).count()};
