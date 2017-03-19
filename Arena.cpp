@@ -83,7 +83,7 @@ inline string EmptyPipe(const int f){
 			throw(4);
 		}
 	}
-	return string(out);
+	return out;
 }
 
 struct AI{
@@ -93,7 +93,9 @@ struct AI{
 		kill(pid,SIGTERM);
 		int status;
 		waitpid(pid,&status,0);//It is necessary to read the exit code for the process to stop
-		//Should add a step with SIGKILL
+		if(!WIFEXITED(status)){//If not exited normally try to "kill -9" the process
+			kill(pid,SIGKILL);
+		}
 	}
 	inline bool alive()const{
 		return kill(pid,0)!=-1;//Check if process is still running
