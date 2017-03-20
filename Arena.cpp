@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <map>
 #include <thread>
+#include <csignal>
 using namespace std;
 using namespace std::chrono;
 
@@ -23,6 +24,8 @@ constexpr int extra_space_between_factories{300};
 constexpr int W{16000},H{6500};
 constexpr int Min_Production_Rate{4};
 const array<string,3> Move_Type_String{"MOVE","BOMB","INC"};
+
+bool stop{false};//Global flag to stop all arena threads when SIGTERM is received
 
 struct vec{
 	int x,y;
@@ -318,7 +321,7 @@ string GetMove(AI &Bot,const int turn){
 	throw(1);
 }
 
-inline bool Has_Won(const array<AI,N> &Bot,const int idx){
+inline bool Has_Won(const array<AI,N> &Bot,const int idx)noexcept{
 	for(int i=0;i<N;++i){
 		if(i!=idx && Bot[i].alive()){
 			return false;
@@ -357,7 +360,7 @@ inline bool Player_Alive(const state &S,const int color)noexcept{
 	return find_if(S.F.begin(),S.F.end(),[&](const factory &f){return f.owner==color && (f.units!=0 || f.prod!=0);})!=S.F.end() || find_if(S.T.begin(),S.T.end(),[&](const troop &t){return t.owner==color;})!=S.T.end();
 }
 
-inline bool All_Dead(const array<AI,N> &Bot){
+inline bool All_Dead(const array<AI,N> &Bot)noexcept{
 	for(const AI &b:Bot){
 		if(b.alive()){
 			return false;
@@ -383,7 +386,7 @@ int Play_Game(const array<string,N> &Bot_Names,state &S){
 	}
 	S.entityId=0;
 	int turn{0};
-	while(++turn>0){
+	while(++turn>0 && !stop){
 		array<string,2> M{"WAIT","WAIT"};
 		for(int i=0;i<N;++i){
 			if(Bot[i].alive()){
@@ -462,14 +465,14 @@ int Play_Game(const array<string,N> &Bot_Names,state &S){
 			return -1;
 		}
 	}
-	throw(0);
+	return -2;
 }
 
-inline double Distance(const vec &a,const vec &b){
+inline double Distance(const vec &a,const vec &b)noexcept{
 	return sqrt(pow(a.x-b.x,2)+pow(a.y-b.y,2));
 }
 
-inline bool Valid_Spawn(const vec &r,const state &S,const int id,const int minSpaceBetweenFactories){
+inline bool Valid_Spawn(const vec &r,const state &S,const int id,const int minSpaceBetweenFactories)noexcept{
 	for(int j=0;j<id;++j){
 		if(Distance(r,S.F[j].r)<minSpaceBetweenFactories){
 			return false;
@@ -543,6 +546,10 @@ int Play_Round(array<string,N> Bot_Names){
 	}
 }
 
+void StopArena(const int signum){
+	stop=true;
+}
+
 int main(int argc,char **argv){
 	if(argc<3){
 		cerr << "Program takes 2 inputs, the names of the AIs fighting each other" << endl;
@@ -570,10 +577,11 @@ int main(int argc,char **argv){
 		}
 		Test.close();
 	}
+	signal(SIGTERM,StopArena);//Register SIGTERM signal handler so the arena can cleanup when you kill it
 	int games{0},draws{0};
 	array<double,2> points{0,0};
 	#pragma omp parallel num_threads(N_Threads) shared(games,points,Bot_Names)
-	while(true){
+	while(!stop){
 		int winner{Play_Round(Bot_Names)};
 		if(winner==-1){//Draw
 			#pragma omp atomic
