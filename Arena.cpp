@@ -165,7 +165,6 @@ void StartProcess(AI &Bot){
 		Bot.outPipe=StdoutPipe[PIPE_READ];
     	Bot.errPipe=StderrPipe[PIPE_READ];
     	Bot.pid=nchild;
-		this_thread::sleep_for(milliseconds(10));
   	}
   	else{//failed to create child
   		close(StdinPipe[PIPE_READ]);
@@ -181,6 +180,11 @@ inline bool Invalid_Factory_Id(const state &S,const int id)noexcept{
 }
 
 void Simulate_Player_Action(state &S,const strat &Moves,const int color){
+	vector<vector<int>> Sent(S.F.size());
+	for(auto &v:Sent){
+		v.resize(S.F.size());
+		fill(v.begin(),v.end(),0);
+	}
     for(const play &m:Moves){
     	if(Invalid_Factory_Id(S,m.from)){
     		cerr << "INVALID: " << m << endl;
@@ -194,7 +198,7 @@ void Simulate_Player_Action(state &S,const strat &Moves,const int color){
         	int real_dispatchment{min(m.amount,f.units)};
         	if(real_dispatchment>0){
 				f.units-=real_dispatchment;
-            	S.T.push_back(troop{color,m.from,m.to,real_dispatchment,f.L[m.to]+1});//+1 distance to compensate for the fact that I do player moves before decreasing turn counters
+				Sent[m.from][m.to]+=real_dispatchment;
         	} 
         }
         else if(m.type==BOMB){
@@ -212,6 +216,13 @@ void Simulate_Player_Action(state &S,const strat &Moves,const int color){
             	++f.prod;
         	}
         }
+    }
+    for(int i=0;i<S.F.size();++i){
+    	for(int j=0;j<S.F.size();++j){
+    		if(i!=j && Sent[i][j]>0){
+    			S.T.push_back(troop{color,i,j,Sent[i][j],S.F[i].L[j]+1});//+1 distance to compensate for the fact that I do player moves before decreasing turn counters
+    		}
+    	}
     }
 }
 
