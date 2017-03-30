@@ -3,6 +3,7 @@
 #include <fstream>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <sys/ioctl.h>
 #include <poll.h>
 #include <array>
 #include <random>
@@ -75,16 +76,15 @@ ostream& operator<<(ostream &os,const vec &r){
 	return os;
 }
 
-inline string EmptyPipe(const int f){
+inline string EmptyPipe(const int fd){
+	int nbytes;
+	if(ioctl(fd,FIONREAD,&nbytes)<0){
+		throw(4);
+	}
 	string out;
-	pollfd outpoll{f,POLLIN};
-	while(poll(&outpoll,1,0)){
-		char c;
-		ssize_t bytes_read{read(f,&c,1)};
-		out+=c;
-		if(bytes_read<1){
-			throw(4);
-		}
+	out.resize(nbytes);
+	if(read(fd,&out[0],nbytes)<0){
+		throw(4);
 	}
 	return out;
 }
