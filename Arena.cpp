@@ -597,6 +597,7 @@ int main(int argc,char **argv){
 		#pragma omp atomic
 		++games;
 		double p{static_cast<double>(points[0])/games};
+		#pragma omp critical
 		cout << "Rounds: " << games << " P0: " << 100*p << "% of wins +- " << 100*sqrt(p*(1-p)/games) << "% with " << draws << " draws" << endl;
 	}
 }
