@@ -180,11 +180,7 @@ inline bool Invalid_Factory_Id(const state &S,const int id)noexcept{
 }
 
 void Simulate_Player_Action(state &S,const strat &Moves,const int color){
-	vector<vector<int>> Sent(S.F.size());
-	for(auto &v:Sent){
-		v.resize(S.F.size());
-		fill(v.begin(),v.end(),0);
-	}
+	vector<int> Sent(pow(S.F.size(),2),0);
     for(const play &m:Moves){
     	if(Invalid_Factory_Id(S,m.from)){
     		cerr << "INVALID: " << m << endl;
@@ -198,7 +194,7 @@ void Simulate_Player_Action(state &S,const strat &Moves,const int color){
         	int real_dispatchment{min(m.amount,f.units)};
         	if(real_dispatchment>0){
 				f.units-=real_dispatchment;
-				Sent[m.from][m.to]+=real_dispatchment;
+				Sent[m.from*S.F.size()+m.to]+=real_dispatchment;
         	} 
         }
         else if(m.type==BOMB){
@@ -219,8 +215,8 @@ void Simulate_Player_Action(state &S,const strat &Moves,const int color){
     }
     for(int i=0;i<S.F.size();++i){
     	for(int j=0;j<S.F.size();++j){
-    		if(i!=j && Sent[i][j]>0){
-    			S.T.push_back(troop{color,i,j,Sent[i][j],S.F[i].L[j]+1});//+1 distance to compensate for the fact that I do player moves before decreasing turn counters
+    		if(i!=j && Sent[i*S.F.size()+j]>0){
+    			S.T.push_back(troop{color,i,j,Sent[i*S.F.size()+j],S.F[i].L[j]+1});//+1 distance to compensate for the fact that I do player moves before decreasing turn counters
     		}
     	}
     }
