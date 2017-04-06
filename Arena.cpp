@@ -1,4 +1,5 @@
 #include <iostream>
+#include <iomanip>
 #include <sstream>
 #include <fstream>
 #include <unistd.h>
@@ -308,6 +309,7 @@ void Make_Move(state &S,AI &Bot,const string &Move){
 				continue;
 			}
 			else{
+				cerr << "Unrecognised move from AI " << Bot.id << " name: " << Bot.name << ": " << Move << endl;
 				throw(3);
 			}
 			M.push_back(m);
@@ -351,7 +353,7 @@ inline void Play_Move(state &S,AI &Bot,const string &M){
 			cerr << "Invalid move from AI " << Bot.id << " name: " << Bot.name << endl;
 		}
 		else if(ex==3){
-			cerr << "Unrecognised move from AI " << Bot.id << " name: " << Bot.name << endl;
+			//cerr << "Unrecognised move from AI " << Bot.id << " name: " << Bot.name << endl;
 		}
 		else if(ex==4){
 			cerr << "Error emptying buffer from AI " << Bot.id << " name: " << Bot.name << endl;
@@ -488,6 +490,12 @@ inline bool Valid_Spawn(const vec &r,const state &S,const int id,const int minSp
 	return true;
 }
 
+void Output_Stats(const array<string,N> &Bot_Names,const int winner){
+	string stats_filename{Bot_Names[0]+"_vs_"+Bot_Names[1]+"_Stats.txt"};
+	ofstream stats_file(stats_filename,ios::app);
+	stats_file << winner << endl;
+}
+
 int Play_Round(array<string,N> Bot_Names){
 	default_random_engine generator(system_clock::now().time_since_epoch().count());
 	uniform_int_distribution<int> Swap_Distrib(0,1);
@@ -604,7 +612,9 @@ int main(int argc,char **argv){
 		#pragma omp atomic
 		++games;
 		double p{static_cast<double>(points[0])/games};
+		double sigma{sqrt(p*(1-p)/games)};
+		double better{p>0.5?0.5+0.5*erf((p-0.5)/(sqrt(2)*sigma)):0.5-0.5*erf((0.5-p)/(sqrt(2)*sigma))};
 		#pragma omp critical
-		cout << "Rounds: " << games << " P0: " << 100*p << "% of wins +- " << 100*sqrt(p*(1-p)/games) << "% with " << draws << " draws" << endl;
+		cout << "Wins:" << setprecision(4) << 100*p << "+-" << 100*sigma << "% Rounds:" << games << " Draws:" << draws << " " << better*100 << "% chance that " << Bot_Names[0] << " is better." << endl;
 	}
 }
