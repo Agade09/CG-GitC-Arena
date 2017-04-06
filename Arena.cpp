@@ -613,7 +613,7 @@ int main(int argc,char **argv){
 		++games;
 		double p{static_cast<double>(points[0])/games};
 		double sigma{sqrt(p*(1-p)/games)};
-		double better{p>0.5?0.5+0.5*erf((p-0.5)/(sqrt(2)*sigma)):0.5-0.5*erf((0.5-p)/(sqrt(2)*sigma))};
+		double better{0.5+0.5*erf((p-0.5)/(sqrt(2)*sigma))};
 		#pragma omp critical
 		cout << "Wins:" << setprecision(4) << 100*p << "+-" << 100*sigma << "% Rounds:" << games << " Draws:" << draws << " " << better*100 << "% chance that " << Bot_Names[0] << " is better." << endl;
 	}
