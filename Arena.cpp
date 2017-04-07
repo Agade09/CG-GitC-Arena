@@ -94,11 +94,13 @@ struct AI{
 	int id,pid,outPipe,errPipe,inPipe;
 	string name;
 	inline void stop(){
-		kill(pid,SIGTERM);
-		int status;
-		waitpid(pid,&status,0);//It is necessary to read the exit code for the process to stop
-		if(!WIFEXITED(status)){//If not exited normally try to "kill -9" the process
-			kill(pid,SIGKILL);
+		if(alive()){
+			kill(pid,SIGTERM);
+			int status;
+			waitpid(pid,&status,0);//It is necessary to read the exit code for the process to stop
+			if(!WIFEXITED(status)){//If not exited normally try to "kill -9" the process
+				kill(pid,SIGKILL);
+			}
 		}
 	}
 	inline bool alive()const{
@@ -615,6 +617,6 @@ int main(int argc,char **argv){
 		double sigma{sqrt(p*(1-p)/games)};
 		double better{0.5+0.5*erf((p-0.5)/(sqrt(2)*sigma))};
 		#pragma omp critical
-		cout << "Wins:" << setprecision(4) << 100*p << "+-" << 100*sigma << "% Rounds:" << games << " Draws:" << draws << " " << better*100 << "% chance that " << Bot_Names[0] << " is better." << endl;
+		cout << "Wins:" << setprecision(4) << 100*p << "+-" << 100*sigma << "% Rounds:" << games << " Draws:" << draws << " " << better*100 << "% chance that " << Bot_Names[0] << " is better" << endl;
 	}
 }
