@@ -278,49 +278,47 @@ void Simulate(state &S){
     }
 }
 
-void Make_Move(state &S,AI &Bot,const string &Move){
+vector<string> Split(const string &s,const char delim){
+	vector<string> tokens;
+	stringstream ss(s);
+	string item;
+	while(getline(ss,item,delim)){
+		tokens.push_back(item);
+	}
+	return tokens;
+}
+
+void Make_Move(state &S,AI &Bot,const string &Move_str){
 	//cerr << Move << endl;
-	stringstream ss(Move);
-	string type;
-	ss >> type;
-	if(type=="WAIT"){
-		return;
-	}
-	else{
-		strat M;
-		size_t delim{0};
-		while(delim!=string::npos){
-			stringstream ss(Move.substr(delim,Move.find_first_of(';',delim)));
-			delim=Move.find_first_of(';',delim);
-			if(delim!=string::npos){
-				++delim;
-			}
-			play m;
-			string type;
-			ss >> type;
-			if(type=="MOVE"){
-				m.type=MOVE;
-				ss >> m.from >> m.to >> m.amount;
-			}
-			else if(type=="BOMB"){
-				m.type=BOMB;
-				ss >> m.from >> m.to;
-			}
-			else if(type=="INC"){
-				m.type=INCREASE;
-				ss >> m.from;
-			}
-			else if(type=="MSG"){
-				continue;
-			}
-			else{
-				cerr << "Unrecognised move from AI " << Bot.id << " name: " << Bot.name << ": " << Move << endl;
-				throw(3);
-			}
-			M.push_back(m);
+	vector<string> Moves=Split(Move_str,';');
+	strat M;
+	for(const string &s:Moves){
+		play m;
+		stringstream ss(s);
+		string type;
+		ss >> type;
+		if(type=="MOVE"){
+			m.type=MOVE;
+			ss >> m.from >> m.to >> m.amount;
 		}
-		Simulate_Player_Action(S,M,Bot.id==1?-1:1);
+		else if(type=="BOMB"){
+			m.type=BOMB;
+			ss >> m.from >> m.to;
+		}
+		else if(type=="INC"){
+			m.type=INCREASE;
+			ss >> m.from;
+		}
+		else if(type=="MSG" || type=="WAIT"){
+			continue;
+		}
+		else{
+			cerr << "Unrecognised move from AI " << Bot.id << " name: " << Bot.name << ": " << Move_str << endl;
+			throw(3);
+		}
+		M.push_back(m);
 	}
+	Simulate_Player_Action(S,M,Bot.id==1?-1:1);
 }
 
 string GetMove(AI &Bot,const int turn){
@@ -346,12 +344,12 @@ inline bool Has_Won(const array<AI,N> &Bot,const int idx)noexcept{
 
 inline void Play_Move(state &S,AI &Bot,const string &M){
 	try{
-		Make_Move(S,Bot,M);
 		string err_str{EmptyPipe(Bot.errPipe)};
 		if(Debug_AI){
 			ofstream err_out("log.txt",ios::app);
 			err_out << err_str << endl;
 		}
+		Make_Move(S,Bot,M);
 	}
 	catch(const int ex){
 		if(ex==2){
@@ -390,7 +388,7 @@ int Play_Game(const array<string,N> &Bot_Names,state &S){
 		Bot[i].name=Bot_Names[i];
 		StartProcess(Bot[i]);
 		stringstream ss;
-		ss << S.F.size() << " " << S.F.size()*(S.F.size()-1)/2 << endl;
+		ss << S.F.size() << endl << S.F.size()*(S.F.size()-1)/2 << endl;
 		for(int j=0;j<S.F.size();++j){
 			for(int k=j+1;k<S.F.size();++k){
 				ss << j << " " << k << " " << S.F[j].L[k] << endl;
