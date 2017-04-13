@@ -390,7 +390,7 @@ int Play_Game(const array<string,N> &Bot_Names,state &S){
 		Bot[i].name=Bot_Names[i];
 		StartProcess(Bot[i]);
 		stringstream ss;
-		ss << S.F.size() << " " << S.F.size()*(S.F.size()-1)/2 << endl;
+		ss << S.F.size() << endl << S.F.size()*(S.F.size()-1)/2 << endl;
 		for(int j=0;j<S.F.size();++j){
 			for(int k=j+1;k<S.F.size();++k){
 				ss << j << " " << k << " " << S.F[j].L[k] << endl;
