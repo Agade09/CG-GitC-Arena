@@ -3,8 +3,8 @@ Arena program that plays games between two Ghost in the Cell AIs. **Linux only**
 
 ## Usage:
 * Compile the Arena program
-* Compile two of your AIs
-* Run the Arena program with the names of the AI binaries as command line parameters. e.g: Arena V13 V12
+* Have two of your AIs' executable binaries/scripts in the same folder
+* Run the Arena program with the names of the AI executables as command line parameters. e.g: Arena V13 V12
 
 ## Optional:
 * Specify the number of threads as a command line parameter. e.g: Arena V13 V12 2
