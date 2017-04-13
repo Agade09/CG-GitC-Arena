@@ -107,7 +107,7 @@ struct AI{
 		return kill(pid,0)!=-1;//Check if process is still running
 	}
 	inline void Feed_Inputs(const string &inputs){
-		if(write(inPipe,&inputs[0],inputs.size())==-1){
+		if(write(inPipe,&inputs[0],inputs.size())!=inputs.size()){
 			throw(5);
 		}
 	}
@@ -198,10 +198,8 @@ void Simulate_Player_Action(state &S,const strat &Moves,const int color){
         		throw(2);
         	}
         	int real_dispatchment{min(m.amount,f.units)};
-        	if(real_dispatchment>0){
-				f.units-=real_dispatchment;
-				Sent[m.from*S.F.size()+m.to]+=real_dispatchment;
-        	} 
+			f.units-=real_dispatchment;
+			Sent[m.from*S.F.size()+m.to]+=real_dispatchment;
         }
         else if(m.type==BOMB){
         	if(m.from==m.to || Invalid_Factory_Id(S,m.to)){
@@ -289,7 +287,7 @@ vector<string> Split(const string &s,const char delim){
 }
 
 void Make_Move(state &S,AI &Bot,const string &Move_str){
-	//cerr << Move << endl;
+	//cerr << Move_str << endl;
 	vector<string> Moves=Split(Move_str,';');
 	strat M;
 	for(const string &s:Moves){
@@ -327,7 +325,11 @@ string GetMove(AI &Bot,const int turn){
 	while(static_cast<duration<double>>(system_clock::now()-Start_Time).count()<(turn==1?FirstTurnTime:TimeLimit)){
 		double TimeLeft{(turn==1?FirstTurnTime:TimeLimit)-static_cast<duration<double>>(system_clock::now()-Start_Time).count()};
 		if(poll(&outpoll,1,TimeLeft)){
-			return EmptyPipe(Bot.outPipe);
+			string out=EmptyPipe(Bot.outPipe);
+			if(out==""){
+				throw(1);
+			}
+			return out;
 		}
 	}
 	throw(1);
@@ -388,7 +390,7 @@ int Play_Game(const array<string,N> &Bot_Names,state &S){
 		Bot[i].name=Bot_Names[i];
 		StartProcess(Bot[i]);
 		stringstream ss;
-		ss << S.F.size() << endl << S.F.size()*(S.F.size()-1)/2 << endl;
+		ss << S.F.size() << " " << S.F.size()*(S.F.size()-1)/2 << endl;
 		for(int j=0;j<S.F.size();++j){
 			for(int k=j+1;k<S.F.size();++k){
 				ss << j << " " << k << " " << S.F[j].L[k] << endl;
@@ -419,8 +421,8 @@ int Play_Game(const array<string,N> &Bot_Names,state &S){
 					const bomb &b{it.second};
 					ss << it.first << " BOMB " << color*b.owner << " " << b.source << " " << (b.owner==color?b.target:-1) << " " << (b.owner==color?b.turns:-1) << " " << 0 << endl;
 				}
-				Bot[i].Feed_Inputs(ss.str());
 				try{
+					Bot[i].Feed_Inputs(ss.str());
 					M[i]=GetMove(Bot[i],turn);
 					//cerr << M[i] << endl;
 				}
@@ -596,6 +598,7 @@ int main(int argc,char **argv){
 		Test.close();
 	}
 	signal(SIGTERM,StopArena);//Register SIGTERM signal handler so the arena can cleanup when you kill it
+	signal(SIGPIPE,SIG_IGN);//Ignore SIGPIPE to avoid the arena crashing when an AI crashes
 	int games{0},draws{0};
 	array<double,2> points{0,0};
 	#pragma omp parallel num_threads(N_Threads) shared(games,points,Bot_Names)
