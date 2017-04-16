@@ -18,10 +18,10 @@
 using namespace std;
 using namespace std::chrono;
 
-constexpr bool Debug_AI{false},Timeout{true};
+constexpr bool Debug_AI{false},Timeout{false};
 constexpr int PIPE_READ{0},PIPE_WRITE{1};
 constexpr int N{2};//Number of players, 1v1
-constexpr double FirstTurnTime{1*(Timeout?10:1)},TimeLimit{0.05*(Timeout?10:1)};
+constexpr double FirstTurnTime{1*(Timeout?1:10)},TimeLimit{0.05*(Timeout?1:10)};
 constexpr int extra_space_between_factories{300};
 constexpr int W{16000},H{6500};
 constexpr int Min_Production_Rate{4};
